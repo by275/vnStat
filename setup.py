@@ -3,12 +3,12 @@ __menu = {
     "name": "vnStat",
     "list": [
         {
-            "uri": "setting",
-            "name": "설정",
-        },
-        {
             "uri": "traffic",
             "name": "트래픽",
+        },
+        {
+            "uri": "setting",
+            "name": "설정",
         },
         {
             "uri": "log",

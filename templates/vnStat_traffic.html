@@ -85,8 +85,7 @@
 
 
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.0.1/chart.umd.min.js" integrity="sha512-HyprZz2W40JOnIBIXDYHCFlkSscDdYaNe2FYl34g1DOmE9J+zEPoT4HHHZ2b3+milFBtiKVWb4sorDVVp+iuqA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script type="text/javascript">
   var package_name = 'vnStat';
@@ -249,33 +248,33 @@
 
 {# Chart.js 관련 #}
 <script>
-  var traffic_chart = null;
-
   function draw_traffic_to_canvas(traffic, bytes_in, canvas_id) {
-    // Global parameters:
-    Chart.defaults.global.responsive = true;
-    Chart.defaults.global.maintainAspectRatio = false;
-
-    // 이렇게 하지 않으면 chart 오브젝트가 오버랩되어 마우스 호버링 시에 챠트가 왔다갔다함
-    // 그냥 각각 다 선언해버려? 그래도 이렇게 하면 메모리라도 덜 먹겠지...
-    if(traffic_chart!=null) {
-      traffic_chart.destroy();
-    }
-
     // define the chart data
     var traffic_xy = get_chartData(traffic['labels'],
-      '다운로드', traffic['rxs'].map((value, index, array) => { return sizeOf(value, bytes_in, false)}),
-      '업로드', traffic['txs'].map((value, index, array) => { return sizeOf(value, bytes_in, false)})
+      traffic['rxs'].map((value, index, array) => { return sizeOf(value, bytes_in, false)}),
+      traffic['txs'].map((value, index, array) => { return sizeOf(value, bytes_in, false)})
     )
+
+    chart = Chart.getChart(canvas_id);
+    if (chart) {
+      chart.data = traffic_xy;
+      chart.update();
+      return
+    }
 
     // get chart canvas
     var ctx = document.getElementById(canvas_id).getContext("2d");
 
     // create the chart using the chart canvas
-    traffic_chart = new Chart(ctx, {
+    chart = new Chart(ctx, {
       type: 'bar',
       data: traffic_xy,
       options: {
+        animation: {
+          duration: 0
+        },
+        maintainAspectRatio: false,
+        responsive: true,
         tooltips: {
           enabled: true,
           mode: "x-axis",
@@ -313,25 +312,27 @@
           }
         },
         scales: {
-            xAxes: [{
+            xAxis: {
                 stacked: true
-            }],
-            yAxes: [{
+            },
+            yAxis: {
                 stacked: true,
                 ticks: {
                   beginAtZero: true
                 }
-            }]
+            }
         }
     }
     });
   }
 
-  function get_chartData(x_labels, y1_labels, y1_data, y2_labels, y2_data) {
+  function get_chartData(x_labels, y1_data, y2_data) {
     return {
       labels: x_labels,
       datasets: [{
-          label: y1_labels,
+          xAxisID: 'xAxis',
+          yAxisID: 'yAxis',
+          label: '다운로드',
           fill: true,
           lineTension: 0.1,
           backgroundColor: "rgba(75,192,192,1)",
@@ -339,7 +340,9 @@
           data: y1_data
         },
         {
-          label: y2_labels,
+          xAxisID: 'xAxis',
+          yAxisID: 'yAxis',
+          label: '업로드',
           fill: true,
           lineTension: 0.1,
           backgroundColor: "rgba(255,99,132,1)",

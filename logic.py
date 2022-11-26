@@ -58,12 +58,11 @@ class LogicMain(PluginModuleBase):
             logger.exception("Exception while attempting to install vnStat on plugin load:")
 
     def process_menu(self, sub, req):
-        arg = ModelSetting.to_dict()
-        if sub == "setting":
-            return render_template(f"{package_name}_{sub}.html", sub=sub, arg=arg)
-        if sub == "traffic":
+        try:
+            arg = ModelSetting.to_dict()
             return render_template(f"{package_name}_{sub}.html", arg=arg)
-        return render_template("sample.html", title=f"{package_name} - {sub}")
+        except Exception:
+            return render_template("sample.html", title=f"{package_name} - {sub}")
 
     def process_ajax(self, sub, req):
         try:
@@ -96,7 +95,7 @@ class LogicMain(PluginModuleBase):
 
     def install(self, show_modal=True):
         try:
-            if platform.system() == "Linux" and F.app.config["config"]["running_type"] == "docker":
+            if platform.system() == "Linux" and F.config["running_type"] == "docker":
                 install_sh = os.path.join(os.path.dirname(__file__), "install.sh")
                 commands = [
                     ["msg", "잠시만 기다려주세요."],
