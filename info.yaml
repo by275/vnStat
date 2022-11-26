@@ -1,0 +1,10 @@
+title: "vnStat"
+version: "1.2.3"
+package_name: "vnStat"
+developer: "by275"
+description: "vnStat 정보를 보여주는 플러그인"
+home: "https://github.com/by275/vnStat"
+more: "https://raw.githubusercontent.com/by275/vnStat/main/README.md"
+supported_vnstat_version:
+  - "2.6"
+  - "2.9"
