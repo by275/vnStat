@@ -100,10 +100,10 @@ class LogicMain(PluginModuleBase):
                 commands = [
                     ["msg", "잠시만 기다려주세요."],
                     ["chmod", "+x", install_sh],
-                    [install_sh, "2.6"],
+                    [install_sh, "2.9"],
                     ["msg", "완료되었습니다."],
                 ]
-                ToolModalCommand("vnStat 설치", commands, wait=True, show_modal=show_modal, clear=True).start()
+                ToolModalCommand.start("vnStat 설치", commands, wait=True, show_modal=show_modal, clear=True)
                 return {"success": True}
             return {"succes": False, "log": "지원하지 않는 시스템입니다."}
         except Exception as e:
