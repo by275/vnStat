@@ -1,5 +1,4 @@
 import os
-import traceback
 from datetime import datetime
 import subprocess
 import json
@@ -38,7 +37,6 @@ def check_output(command, shell=True):
 
 class LogicMain(PluginModuleBase):
     db_default = {
-        "interval": "20",
         "default_interface_id": "",
         "default_traffic_view": "months",
         "traffic_unit": "iec",
@@ -107,8 +105,7 @@ class LogicMain(PluginModuleBase):
                 return {"success": True}
             return {"succes": False, "log": "지원하지 않는 시스템입니다."}
         except Exception as e:
-            logger.error("Exception:%s", e)
-            logger.error(traceback.format_exc())
+            logger.exception("Exception while attempting to install vnStat:")
             return {"success": False, "log": str(e)}
 
     def parsing_vnstat_traffic(self, traffic, data_type):
@@ -223,9 +220,9 @@ class LogicMain(PluginModuleBase):
                 return {"ret": "parsing_error", "log": str(e)}
         except subprocess.CalledProcessError as e:
             # vnStat 바이너리가 없을때
-            logger.error(e)
+            logger.exception("Exception while calling vnStat process:")
             return {"ret": "no_bin", "log": e.output.strip().decode("utf-8")}
         except Exception:
             # 그 외의 에러, 대부분 데이터베이스가 없어서 json 값이 들어오지 않는 경우
-            logger.exception("Exception while getting result of vnStat:")
+            logger.exception("Exception while getting result from vnStat:")
             return {"ret": "no_json", "log": vnstat_stdout}
