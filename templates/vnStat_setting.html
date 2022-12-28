@@ -18,9 +18,9 @@
         {{ macros.setting_radio_with_value('traffic_unit', '트래픽 표시 단위', [['si', 'SI 단위 (MB, GB, TB)'], ['iec', 'IEC 단위 (MiB, GiB, TiB)']], value=arg['traffic_unit']) }}
         {{ macros.setting_buttons([['globalSettingSaveBtn', '저장']]) }}
       </form>
-      
+
     {{ macros.m_tab_content_end() }}
-    
+
   </div><!--tab-content-->
 </div> <!--전체-->
 
@@ -50,7 +50,7 @@ $(document).ready(function(){
       }
     });
   });
-  
+
   $(function() {
     $.ajax({
       url: '/' + package_name + '/ajax/get_vnstat_info',
@@ -148,5 +148,5 @@ function get_interface(id) {
 }
 
 
-</script>    
+</script>
 {% endblock %}

@@ -109,7 +109,7 @@ class LogicMain(PluginModuleBase):
             return {"success": False, "log": str(e)}
 
     def parsing_vnstat_traffic(self, traffic, data_type):
-        labels, rxs, txs, totals = [], [], [], []
+        labels, rxs, txs = [], [], []
         for item in traffic[data_type]:
             # fiveminute, hour, day, month, year, top
             if data_type == "fiveminute":
@@ -135,12 +135,10 @@ class LogicMain(PluginModuleBase):
             labels.append(label)
             rxs.append(item["rx"])
             txs.append(item["tx"])
-            totals.append((item["rx"] + item["tx"]))
         return {
             "labels": labels,
             "rxs": rxs,
             "txs": txs,
-            "totals": totals,
         }
 
     def parsing_vnstat_json(self, vnstat_json):
@@ -159,32 +157,27 @@ class LogicMain(PluginModuleBase):
                 "top": self.parsing_vnstat_traffic(traffic, "top"),
             }
             # summary
-            labels, rxs, txs, totals = [], [], [], []
+            labels, rxs, txs = [], [], []
 
             labels.append("오늘")
             try:
                 rxs.append(vnstat_interfaces["day"]["rxs"][-1])
                 txs.append(vnstat_interfaces["day"]["txs"][-1])
-                totals.append(vnstat_interfaces["day"]["totals"][-1])
             except IndexError:
                 rxs.append(0)
                 txs.append(0)
-                totals.append(0)
 
             labels.append("이번달")
             try:
                 rxs.append(vnstat_interfaces["month"]["rxs"][-1])
                 txs.append(vnstat_interfaces["month"]["txs"][-1])
-                totals.append(vnstat_interfaces["month"]["totals"][-1])
             except IndexError:
                 rxs.append(0)
                 txs.append(0)
-                totals.append(0)
 
             labels.append("전체기간")
             rxs.append(traffic["total"]["rx"])
             txs.append(traffic["total"]["tx"])
-            totals.append((traffic["total"]["rx"] + traffic["total"]["tx"]))
 
             vnstat_interfaces.update(
                 {
@@ -192,7 +185,6 @@ class LogicMain(PluginModuleBase):
                         "labels": labels,
                         "rxs": rxs,
                         "txs": txs,
-                        "totals": totals,
                     }
                 }
             )
@@ -202,7 +194,7 @@ class LogicMain(PluginModuleBase):
             tf_list_vals = [x.strip() for x in ModelSetting.get("traffic_list").split(",")]
             for key, val in zip(tf_view_keys, tf_list_vals):
                 nlimit = int(val) if val.isdigit() else 0
-                for subkey in ["labels", "rxs", "txs", "totals"]:
+                for subkey in ["labels", "rxs", "txs"]:
                     vnstat_interfaces[key][subkey] = vnstat_interfaces[key][subkey][-nlimit:]
 
             ret.append(vnstat_interfaces)

@@ -38,7 +38,7 @@
       </div>
       <div class="card border-0 ml-4 mr-4 mt-2">
         <table id="tbl_fiveminutes" class="table table-sm"></table>
-        </div>      
+        </div>
     {{ macros.m_tab_content_end() }}
     {{ macros.m_tab_content_start('hours', (arg['default_traffic_view']=='hours')) }}
       <div class="card border-0 m-2" style="height: 300px;">
@@ -46,7 +46,7 @@
       </div>
       <div class="card border-0 ml-4 mr-4 mt-2">
         <table id="tbl_hours" class="table table-sm"></table>
-        </div>      
+        </div>
     {{ macros.m_tab_content_end() }}
     {{ macros.m_tab_content_start('days', (arg['default_traffic_view']=='days')) }}
       <div class="card border-0 m-2" style="height: 300px;">
@@ -54,7 +54,7 @@
       </div>
       <div class="card border-0 ml-4 mr-4 mt-2">
         <table id="tbl_days" class="table table-sm"></table>
-        </div>      
+        </div>
     {{ macros.m_tab_content_end() }}
     {{ macros.m_tab_content_start('months', (arg['default_traffic_view']=='months')) }}
       <div class="card border-0 m-2" style="height: 300px;">
@@ -62,7 +62,7 @@
       </div>
       <div class="card border-0 ml-4 mr-4 mt-2">
         <table id="tbl_months" class="table table-sm"></table>
-        </div>      
+        </div>
     {{ macros.m_tab_content_end() }}
     {{ macros.m_tab_content_start('years', (arg['default_traffic_view']=='years')) }}
       <div class="card border-0 m-2" style="height: 300px;">
@@ -70,7 +70,7 @@
       </div>
       <div class="card border-0 ml-4 mr-4 mt-2">
         <table id="tbl_years" class="table table-sm"></table>
-        </div>      
+        </div>
     {{ macros.m_tab_content_end() }}
     {{ macros.m_tab_content_start('top', (arg['default_traffic_view']=='top')) }}
       <div class="card border-0 m-2" style="height: 300px;">
@@ -78,14 +78,14 @@
       </div>
       <div class="card border-0 ml-4 mr-4 mt-2">
         <table id="tbl_top" class="table table-sm"></table>
-        </div>      
+        </div>
     {{ macros.m_tab_content_end() }}
   </div> <!--tab-content-->
 </div> <!--전체-->
 
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.0.1/chart.umd.min.js" integrity="sha512-HyprZz2W40JOnIBIXDYHCFlkSscDdYaNe2FYl34g1DOmE9J+zEPoT4HHHZ2b3+milFBtiKVWb4sorDVVp+iuqA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.1.1/chart.umd.min.js" integrity="sha512-RnIvaWVgsDUVriCOO7ZbDOwPqBY1kdE8KJFmJbCSFTI+a+/s+B1maHN513SFhg1QwAJdSKbF8t2Obb8MIcTwxA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script type="text/javascript">
   var package_name = 'vnStat';
@@ -190,7 +190,7 @@
     current_interface_id = document.getElementById("interface_id").value;
     make_html(current_interface_id)
   });
-  
+
   $('a[id^="tab_"]').click(function(e) {
     e.preventDefault()
     make_tabs($(this).attr('id'))
@@ -238,7 +238,7 @@
       str += `<tr><th scope="row" class="text-right">${traffic['labels'][i]}</th>
       <td class="text-right">${sizeOf(traffic['rxs'][i], bytes_in, true)}</td>
       <td class="text-right">${sizeOf(traffic['txs'][i], bytes_in, true)}</td>
-      <td class="text-right">${sizeOf(traffic['totals'][i], bytes_in, true)}</td></tr>`
+      <td class="text-right">${sizeOf(traffic['rxs'][i] + traffic['txs'][i], bytes_in, true)}</td></tr>`
     }
     str += '</tbody>'
     return str
@@ -275,38 +275,45 @@
         },
         maintainAspectRatio: false,
         responsive: true,
-        tooltips: {
-          enabled: true,
-          mode: "x-axis",
-          callbacks: {
-            label: function(tooltipItem, data) {
-              var di = tooltipItem.datasetIndex;   // dataset index
-              var xi = tooltipItem.index;   // index over x-axis
-              var ret = data.datasets[di].label + ": " + (data.datasets[di].data[xi]).toFixed(2);
-              if (xi > 0) {
-                var delta = data.datasets[di].data[xi] - data.datasets[di].data[xi-1];
-                ret += " (" + ((delta > 0) ? "+" : "") + delta.toFixed(2)  + ")"
-              }
-              return ret;
-            },
-            footer: function(tooltipItems, data) {
-              if (tooltipItems.length > 1) {
-                function totalAcrossDatasets(_tooltipItems, _data, _xi) {
-                  var total = 0.0;
-                  for (var i=0; i<_tooltipItems.length; i++) {                
-                    total += _data.datasets[_tooltipItems[i].datasetIndex].data[_xi];
-                  }
-                  return total;
+        plugins: {
+          tooltip: {
+            enabled: true,
+            mode: "index",
+            callbacks: {
+              label: function(ctx) {
+                let label = ctx.dataset.label || '';
+                if (label) {
+                    label += ': ';
                 }
-                var xi = tooltipItems[0].index;   // index over x-axis
-                var currTotal = totalAcrossDatasets(tooltipItems, data, xi);
-                var ret = "합계: " + currTotal.toFixed(2);
+                if (ctx.parsed.y !== null) {
+                    label += (ctx.parsed.y).toFixed(2);
+                }
+                let xi = ctx.dataIndex;   // index over x-axis
                 if (xi > 0) {
-                  var prevTotal = totalAcrossDatasets(tooltipItems, data, xi-1);
-                  var delta = currTotal - prevTotal;
-                  ret += " (" + ((delta > 0) ? "+" : "") + delta.toFixed(2)  + ")"
+                  let delta = ctx.dataset.data[xi] - ctx.dataset.data[xi-1];
+                  label += " (" + ((delta > 0) ? "+" : "") + delta.toFixed(2)  + ")"
                 }
-                return ret;
+                return label;
+              },
+              footer: function(ctxs) {
+                if (ctxs.length > 1) {
+                  function totalAcrossDatasets(_ctxs, _xi) {
+                    var total = 0.0;
+                    for (var i=0; i<_ctxs.length; i++) {
+                      total += _ctxs[i].dataset.data[_xi];
+                    }
+                    return total;
+                  }
+                  var xi = ctxs[0].dataIndex;   // index over x-axis
+                  var currTotal = totalAcrossDatasets(ctxs, xi);
+                  var ret = "합계: " + currTotal.toFixed(2);
+                  if (xi > 0) {
+                    var prevTotal = totalAcrossDatasets(ctxs, xi-1);
+                    var delta = currTotal - prevTotal;
+                    ret += " (" + ((delta > 0) ? "+" : "") + delta.toFixed(2)  + ")"
+                  }
+                  return ret;
+                }
               }
             }
           }
