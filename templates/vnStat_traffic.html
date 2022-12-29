@@ -7,13 +7,13 @@
   <label class="d-inline-block" for="interface_id">네트워크 인터페이스</label>
   <select name="interface_id" class="form-control form-control-sm d-inline-block ml-1 mr-1" style="width: auto;" id="interface_id">
   </select>
-  <button id="change_interface_btn" name="change_interface_btn" class="btn btn-sm btn-outline-success mb-1">선택</button>
+  <button id="save_view_btn" name="save_view_btn" class="btn btn-sm btn-outline-success mb-1">저장</button>
 </div>
 
 <div id="summary_card" class="card mt-3">
   <div class="card-header">트래픽 요약</div>
   <div class="card-body">
-    <p id="dbdates_p" class="card-text mt-0 mb-1 text-sm-right small text-muted">
+    <p id="dbinfo" class="card-text mt-0 mb-1 text-sm-right small text-muted">
     </p>
     <table id="tbl_summary" class="table table-sm mb-0">
     </table>
@@ -89,68 +89,65 @@
 
 <script type="text/javascript">
   var package_name = 'vnStat';
-  var current_data = null;
-  var current_interface_id = null;
   var current_traffic = null;
-  var default_interface_id = "{{arg['default_interface_id']}}"
+  var current_interface_id = "{{arg['default_interface_id']}}"
   var bytes_in_si = ("{{arg['traffic_unit']}}" == "si")
 
   $(document).ready(function () {
+    get_vnstat_data(current_interface_id);
+  });
+
+  function get_vnstat_data(ifname) {
     $.ajax({
-      url: '/' + package_name + '/ajax/get_vnstat_info',
+      url: `/${package_name}/ajax/get_vnstat_data`,
       type: "POST",
       cache: false,
-      data: {},
+      data: {'ifname': ifname},
       dataType: "json",
-      success: function (data) {
-        // 넘겨받은 데이터 저장
-        current_data = data;
-        // console.log(data)
-        // m_modal 로 데이터 확인 편리
-        // m_modal(data);
-        if (data.ret == 'success') {
-          make_html(default_interface_id)
+      success: function (resp) {
+        if (resp.success) {
+          current_interface_id = ifname;
+          current_traffic = resp.data.traffic;
+          make_html(resp.data);
         } else {
-          make_error(data.log)
+          make_error(resp.log);
         }
       }
     });
-  });
+  }
 
-  function make_error(data) {
+  function make_error(log) {
     // to show_if_error
     str = `
     <div class="form-group mb-0 ml-2">
     <p class="text-decoration-none">
-      설정으로 이동하여 vnStat 패키지를 설치하고 데이터베이스를 준비해 주세요.
+      vnStat는 설치 되었는지, 설정에서 vnStat 실행 경로가 정확한지 확인해 주세요.
     </p>
     </div>
     <div class="card mt-3 mb-3 text-white bg-dark">
     <div class="card-body">
-      <p class="card-text">${data.split('\n').join('<br>\n').replace(/\s/g, '&nbsp;')}</p>
+      <p class="card-text">${log.split('\n').join('<br>\n').replace(/\s/g, '&nbsp;')}</p>
     </div>
     </div>`
     document.getElementById("show_if_error").innerHTML = str;
     $('#show_if_error').collapse('show');
   }
 
-  function make_html(id) {
+  function make_html(data) {
     // to selection header
     str = ''
-    current_traffic = current_data.data[0]
-    for (i in current_data.data) {
-      str += `<option value="${current_data.data[i].name}">${current_data.data[i].name}</option>`
-      if (current_data.data[i].name == id) {
-        current_traffic = current_data.data[i]
-      }
-    }
+    data.iflist.forEach(function(ifname) {
+      str += `<option value="${ifname}">${ifname}</option>`;
+    });
     document.getElementById("interface_id").innerHTML = str;
-    document.getElementById('interface_id').value = current_traffic.name;
-
+    document.getElementById('interface_id').value = data.interface.name;
+    
     // to summary_card
-    str = `데이터베이스 생성일: ${current_traffic.created}, 최근 업데이트: ${current_traffic.updated}`
-    document.getElementById("dbdates_p").innerHTML = str;
-    document.getElementById("tbl_summary").innerHTML = make_table(current_traffic['summary'], '_')
+    str = `vnStat v${data.vnstatversion}`;
+    str += `, 데이터베이스 생성일: ${data.interface.created}`
+    str += `, 최근 업데이트: ${data.interface.updated}`
+    document.getElementById("dbinfo").innerHTML = str;
+    document.getElementById("tbl_summary").innerHTML = make_table(data.summary, '_')
 
     // complete tabs
     activeTabId = $('.tab-content .active').attr('id');
@@ -159,36 +156,54 @@
 
   function make_tabs(tab_id) {
     if (tab_id.endsWith('fiveminutes')) {
-      draw_traffic_to_canvas(current_traffic['fiveminute'], 'G', "chart_fiveminutes");
-      document.getElementById("tbl_fiveminutes").innerHTML = make_table(current_traffic['fiveminute'], 'G');
+      traffic_on_canvas(current_traffic.fiveminute, 'G', "chart_fiveminutes");
+      document.getElementById("tbl_fiveminutes").innerHTML = make_table(current_traffic.fiveminute, 'G');
     } else if (tab_id.endsWith('hours')) {
-      draw_traffic_to_canvas(current_traffic['hour'], 'G', "chart_hours");
-      document.getElementById("tbl_hours").innerHTML = make_table(current_traffic['hour'], 'G');
+      traffic_on_canvas(current_traffic.hour, 'G', "chart_hours");
+      document.getElementById("tbl_hours").innerHTML = make_table(current_traffic.hour, 'G');
     } else if (tab_id.endsWith('days')) {
-      draw_traffic_to_canvas(current_traffic['day'], 'G', "chart_days");
-      document.getElementById("tbl_days").innerHTML = make_table(current_traffic['day'], 'G');
+      traffic_on_canvas(current_traffic.day, 'G', "chart_days");
+      document.getElementById("tbl_days").innerHTML = make_table(current_traffic.day, 'G');
     } else if (tab_id.endsWith('months')) {
-      draw_traffic_to_canvas(current_traffic['month'], 'T', "chart_months");
-      document.getElementById("tbl_months").innerHTML = make_table(current_traffic['month'], 'T');
+      traffic_on_canvas(current_traffic.month, 'T', "chart_months");
+      document.getElementById("tbl_months").innerHTML = make_table(current_traffic.month, 'T');
     } else if (tab_id.endsWith('years')) {
-      draw_traffic_to_canvas(current_traffic['year'], 'T', "chart_years");
-      document.getElementById("tbl_years").innerHTML = make_table(current_traffic['year'], 'T');
+      traffic_on_canvas(current_traffic.year, 'T', "chart_years");
+      document.getElementById("tbl_years").innerHTML = make_table(current_traffic.year, 'T');
     } else if (tab_id.endsWith('top')) {
-      draw_traffic_to_canvas(current_traffic['top'], 'T', "chart_top");
-      document.getElementById("tbl_top").innerHTML = make_table(current_traffic['top'], 'T');
+      traffic_on_canvas(current_traffic.top, 'T', "chart_top");
+      document.getElementById("tbl_top").innerHTML = make_table(current_traffic.top, 'T');
     }
   }
 
-  $("body").on('click', '#change_interface_btn', function (e) {
+  $("body").on('click', '#save_view_btn', function (e) {
     e.preventDefault();
-    current_interface_id = document.getElementById("interface_id").value;
-    make_html(current_interface_id)
+    $.ajax({
+      url: `/${package_name}/ajax/save_current_view`,
+      type: "POST",
+      cache: false,
+      data: {
+        'traffic_view': $('.tab-content .active').attr('id'),
+        'interface_id': current_interface_id
+      },
+      dataType: "json",
+      success: function (resp) {
+        if (resp.success) {
+          $.notify('<strong>현재의 보기 상태를 저장했습니다.</strong>', {
+              type: 'info'
+          });
+        } else {
+          $.notify('<strong>실패하였습니다!</strong><br>' + resp.log, {
+              type: 'warning'
+          });
+        }
+      }
+    });
   });
 
   $("body").on('change', '#interface_id', function (e) {
     e.preventDefault();
-    current_interface_id = document.getElementById("interface_id").value;
-    make_html(current_interface_id)
+    get_vnstat_data(document.getElementById("interface_id").value);
   });
 
   $('a[id^="tab_"]').click(function(e) {
@@ -248,7 +263,7 @@
 
 {# Chart.js 관련 #}
 <script>
-  function draw_traffic_to_canvas(traffic, bytes_in, canvas_id) {
+  function traffic_on_canvas(traffic, bytes_in, canvas_id) {
     // define the chart data
     var traffic_xy = get_chartData(traffic['labels'],
       traffic['rxs'].map((value, index, array) => { return sizeOf(value, bytes_in, false)}),
