@@ -21,12 +21,13 @@ plugin_info = plugin.plugin_info
 def get_vnstat_data(ifname: str):
     limits = ModelSetting.get("traffic_list").split(",")
     limits = [max(lim, 0) for lim in map(int, map(str.strip, limits))]
-    vnstat_db = ModelSetting.get("vnstat_db").strip()
+    vnstat_dbdir = ModelSetting.get("vnstat_dbdir").strip()
     vnstat_bin = ModelSetting.get("vnstat_bin").strip()
-    if vnstat_db or Path(vnstat_db).is_file():
+    if vnstat_dbdir:
         try:
-            return vnStatDB.from_db(vnstat_db, ifname, limits)
+            return vnStatDB.from_db(vnstat_dbdir, ifname, limits)
         except Exception:
+            logger.exception("Exception while getting vnStatData by vnStatDB:")
             return vnStatJson.from_bin(vnstat_bin, ifname, limits)
     else:
         return vnStatJson.from_bin(vnstat_bin, ifname, limits)
@@ -39,7 +40,7 @@ class LogicMain(PluginModuleBase):
         "traffic_unit": "iec",
         "traffic_list": "24,24,30,12,0,10",
         "vnstat_bin": "vnstat",
-        "vnstat_db": "",
+        "vnstat_dbdir": "",
     }
 
     def __init__(self, PM):

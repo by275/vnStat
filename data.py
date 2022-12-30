@@ -4,6 +4,8 @@ import sqlite3
 import subprocess
 from contextlib import closing
 from datetime import datetime
+from os import PathLike
+from pathlib import Path
 from typing import List, Union
 
 
@@ -193,7 +195,7 @@ class vnStatJson(vnStatData):
 
 
 class SQLite:
-    def __init__(self, dbfile: str, **kwargs):
+    def __init__(self, dbfile: PathLike, **kwargs):
         self.dbfile = dbfile
         self.kwargs = kwargs
         self.conn = None
@@ -228,7 +230,8 @@ class vnStatDB(vnStatData):
         return data
 
     @classmethod
-    def from_db(cls, dbfile: str, ifname: str, limits: List[int]):
+    def from_db(cls, dbdir: PathLike, ifname: str, limits: List[int]):
+        dbfile = Path(dbdir).joinpath("vnstat.db")
         with SQLite(dbfile) as db:
             iflist = [x[0] for x in db.queryall("select name from interface")]
             if not iflist:

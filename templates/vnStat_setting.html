@@ -12,7 +12,7 @@
     {{ macros.m_tab_content_start('basic', true) }}
       <form id="setting" name="setting">
         {{ macros.setting_input_text_and_buttons('vnstat_bin', 'vnStat 실행 경로', [['check-vnstat-bin-btn', '버전 확인']], value=arg['vnstat_bin']) }}
-        {{ macros.setting_input_text('vnstat_db', 'vnStat DB 경로', value=arg['vnstat_db'], desc=['DB에서 직접 데이터를 가져옵니다. 속도가 빠르고 vnStat가 설치되어 있지 않아도 동작합니다.']) }}
+        {{ macros.setting_input_text('vnstat_dbdir', 'vnStat DB 폴더', value=arg['vnstat_dbdir'], desc=['DB로부터 직접 데이터를 가져옵니다. 좀 더 빠르고 vnStat가 설치되어 있지 않아도 동작합니다.']) }}
         {{ macros.setting_input_text('traffic_list', '트래픽 표시 갯수', value=arg['traffic_list'], desc=['각 트래픽 보기마다 몇 개의 항목을 노출할 것인지 결정', '6개의 0보다 큰 숫자를 콤마로 구분하여 입력. 0이면 제한없이 모두 노출']) }}
         {{ macros.setting_radio_with_value('traffic_unit', '트래픽 표시 단위', [['si', 'SI 단위 (MB, GB, TB)'], ['iec', 'IEC 단위 (MiB, GiB, TiB)']], value=arg['traffic_unit']) }}
         {{ macros.setting_buttons([['globalSettingSaveBtn', '저장']]) }}
