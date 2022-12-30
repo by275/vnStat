@@ -1,4 +1,5 @@
 import subprocess
+from pathlib import Path
 
 # third-party
 from flask import render_template, jsonify
@@ -8,13 +9,27 @@ from plugin import PluginModuleBase
 
 # local
 from .setup import P
-from .data import check_output, vnStatDataJson
+from .data import check_output, vnStatJson, vnStatDB
 
 plugin = P
 logger = plugin.logger
 package_name = plugin.package_name
 ModelSetting = plugin.ModelSetting
 plugin_info = plugin.plugin_info
+
+
+def get_vnstat_data(ifname: str):
+    limits = ModelSetting.get("traffic_list").split(",")
+    limits = [max(lim, 0) for lim in map(int, map(str.strip, limits))]
+    vnstat_db = ModelSetting.get("vnstat_db").strip()
+    vnstat_bin = ModelSetting.get("vnstat_bin").strip()
+    if vnstat_db or Path(vnstat_db).is_file():
+        try:
+            return vnStatDB.from_db(vnstat_db, ifname, limits)
+        except Exception:
+            return vnStatJson.from_bin(vnstat_bin, ifname, limits)
+    else:
+        return vnStatJson.from_bin(vnstat_bin, ifname, limits)
 
 
 class LogicMain(PluginModuleBase):
@@ -48,12 +63,10 @@ class LogicMain(PluginModuleBase):
                 path = p.get("path", "vnstat")
                 return {"success": True, "data": check_output(f"{path} -v")}
             if sub == "get_vnstat_data":
-                vnstat_bin = ModelSetting.get("vnstat_bin")
                 ifname = p.get("ifname", ModelSetting.get("default_interface_id"))
-                limits = ModelSetting.get("traffic_list").split(",")
-                limits = map(int, map(str.strip, limits))
-                data = vnStatDataJson.from_bin(vnstat_bin, ifname, limits).export()
-                return {"success": True, "data": data}
+                data = get_vnstat_data(ifname)
+                logger.debug("vnStatData by %s", data.__class__.__name__)
+                return {"success": True, "data": data.export()}
             if sub == "save_current_view":
                 traffic_view = p.get("traffic_view", "")
                 if traffic_view:

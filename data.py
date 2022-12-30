@@ -1,6 +1,8 @@
 import json
 import os
+import sqlite3
 import subprocess
+from contextlib import closing
 from datetime import datetime
 from typing import List, Union
 
@@ -109,7 +111,7 @@ class vnStatData:
         }
 
 
-class vnStatDataJson(vnStatData):
+class vnStatJson(vnStatData):
     @staticmethod
     def strptime(item: dict) -> datetime:
         date = item.get("date", {})
@@ -122,12 +124,12 @@ class vnStatDataJson(vnStatData):
         return datetime(year, month, day, hour, minute)
 
     @staticmethod
-    def parse_traffic(traffic: dict, datatype: str):
+    def parse_traffic(traffic: dict, mode: str):
         data = []
-        for item in traffic[datatype]:
+        for item in traffic[mode]:
             data.append(
                 {
-                    "dt": vnStatDataJson.strptime(item),
+                    "dt": vnStatJson.strptime(item),
                     "rx": item["rx"],
                     "tx": item["tx"],
                 }
@@ -179,16 +181,96 @@ class vnStatDataJson(vnStatData):
         }
 
         # limit
-        views = ["fiveminute", "hour", "day", "month", "year", "top"]
-        for key, val in zip(views, limits):
-            traffic[key] = traffic[key][-val:]
+        modes = ["fiveminute", "hour", "day", "month", "year", "top"]
+        for mode, lim in zip(modes, limits):
+            if mode == "top" and lim > 0:
+                traffic[mode] = traffic[mode][:lim]
+            else:
+                traffic[mode] = traffic[mode][-lim:]
 
-        this.traffic = {
-            "fiveminute": cls.parse_traffic(traffic, "fiveminute"),
-            "hour": cls.parse_traffic(traffic, "hour"),
-            "day": cls.parse_traffic(traffic, "day"),
-            "month": cls.parse_traffic(traffic, "month"),
-            "year": cls.parse_traffic(traffic, "year"),
-            "top": cls.parse_traffic(traffic, "top"),
+        this.traffic = {m: cls.parse_traffic(traffic, m) for m in modes}
+        return this
+
+
+class SQLite:
+    def __init__(self, dbfile: str, **kwargs):
+        self.dbfile = dbfile
+        self.kwargs = kwargs
+        self.conn = None
+
+    def __enter__(self):
+        self.conn = sqlite3.connect(self.dbfile, **self.kwargs)
+        self.conn.row_factory = sqlite3.Row
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.conn.close()
+
+    def queryone(self, *args, **kwargs) -> sqlite3.Row:
+        with closing(self.conn.cursor()) as c:
+            return c.execute(*args, **kwargs).fetchone()
+
+    def queryall(self, *args, **kwargs) -> List[sqlite3.Row]:
+        with closing(self.conn.cursor()) as c:
+            return c.execute(*args, **kwargs).fetchall()
+
+
+class vnStatDB(vnStatData):
+    """3.6x faster than vnStatJson"""
+
+    @staticmethod
+    def parse_traffic(traffic: dict, mode: str):
+        data = []
+        for item in traffic[mode]:
+            dt = item.pop("datetime", None)
+            dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+            data.append({"dt": dt, **item})
+        return data
+
+    @classmethod
+    def from_db(cls, dbfile: str, ifname: str, limits: List[int]):
+        with SQLite(dbfile) as db:
+            iflist = [x[0] for x in db.queryall("select name from interface")]
+            if not iflist:
+                raise NotFound("No interfaces found")
+
+            if ifname not in iflist:
+                ifname = iflist[0]
+
+            qstr = "select value from info where name=?"
+            dbversion = db.queryone(qstr, ("dbversion",))[0]
+            if dbversion != "1":
+                raise Unsupported(f"Current dbversion={dbversion} not supported")
+            vnstatversion = db.queryone(qstr, ("vnstatversion",))[0]
+
+            interface = dict(db.queryone("select * from interface where name=?", (ifname,)))
+
+        this = cls()
+        this.vnstatversion = vnstatversion
+        this.iflist = iflist
+
+        this.interface = {
+            "name": interface["name"],
+            "created": interface["created"],
+            "updated": interface["updated"],
+            "total": {"rx": interface["rxtotal"], "tx": interface["txtotal"]},
         }
+
+        # traffic with limit
+        modes = ["fiveminute", "hour", "day", "month", "year", "top"]
+        traffic = {}
+        with SQLite(dbfile, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES) as db:
+            for tbl, lim in zip(modes, limits):
+                if tbl == "top":
+                    qstr = "select strftime('%Y-%m-%d %H:%M:%S', date) as datetime,rx,tx from (select * from top where interface=?) order by rx+tx desc"
+                    if lim > 0:
+                        qstr += f" limit {lim}"
+                else:
+                    if lim == 0:
+                        qstr = f"select strftime('%Y-%m-%d %H:%M:%S', date) as datetime,rx,tx from {tbl} where interface=? order by date asc"
+                    else:
+                        qstr = f"select strftime('%Y-%m-%d %H:%M:%S', date) as datetime,rx,tx from (select * from {tbl} where interface=? order by date desc limit {lim}) order by date asc"
+                traffic[tbl] = [dict(item) for item in db.queryall(qstr, (interface["id"],))]
+
+        this.traffic = {tbl: cls.parse_traffic(traffic, tbl) for tbl in modes}
         return this

@@ -144,7 +144,7 @@
     
     // to summary_card
     str = `vnStat v${data.vnstatversion}`;
-    str += `, 데이터베이스 생성일: ${data.interface.created}`
+    str += `, DB 생성일: ${data.interface.created}`
     str += `, 최근 업데이트: ${data.interface.updated}`
     document.getElementById("dbinfo").innerHTML = str;
     document.getElementById("tbl_summary").innerHTML = make_table(data.summary, '_')
@@ -156,8 +156,8 @@
 
   function make_tabs(tab_id) {
     if (tab_id.endsWith('fiveminutes')) {
-      traffic_on_canvas(current_traffic.fiveminute, 'G', "chart_fiveminutes");
-      document.getElementById("tbl_fiveminutes").innerHTML = make_table(current_traffic.fiveminute, 'G');
+      traffic_on_canvas(current_traffic.fiveminute, 'M', "chart_fiveminutes");
+      document.getElementById("tbl_fiveminutes").innerHTML = make_table(current_traffic.fiveminute, 'M');
     } else if (tab_id.endsWith('hours')) {
       traffic_on_canvas(current_traffic.hour, 'G', "chart_hours");
       document.getElementById("tbl_hours").innerHTML = make_table(current_traffic.hour, 'G');
@@ -190,7 +190,7 @@
       success: function (resp) {
         if (resp.success) {
           $.notify('<strong>현재의 보기 상태를 저장했습니다.</strong>', {
-              type: 'info'
+              type: 'success'
           });
         } else {
           $.notify('<strong>실패하였습니다!</strong><br>' + resp.log, {
