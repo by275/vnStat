@@ -1,5 +1,4 @@
 import subprocess
-from pathlib import Path
 
 # third-party
 from flask import render_template, jsonify
@@ -62,7 +61,7 @@ class LogicMain(PluginModuleBase):
         try:
             if sub == "check_vnstat_bin":
                 path = p.get("path", "vnstat")
-                return {"success": True, "data": check_output(f"{path} -v")}
+                return {"success": True, "data": check_output([path, "-v"])}
             if sub == "get_vnstat_data":
                 ifname = p.get("ifname", ModelSetting.get("default_interface_id"))
                 data = get_vnstat_data(ifname)

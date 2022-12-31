@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import List, Union
 
 
-def check_output(command: Union[str, list], shell: bool = True):
-    stdout = subprocess.check_output(command, shell=shell, stderr=subprocess.STDOUT)
+def check_output(args: Union[str, list], shell: bool = False):
+    stdout = subprocess.check_output(args, shell=shell, stderr=subprocess.STDOUT)
     return os.linesep.join(stdout.decode(errors="ignore").splitlines())
 
 
@@ -155,14 +155,15 @@ class vnStatJson(vnStatData):
         interfaces[].traffic.year[]: {id: , rx: , tx: , date: {year: }}
         interfaces[].traffic.top[]: SAME_AS_DAY
         """
-        iflist = check_output(f"{vnstatbin} --dbiflist").split(":", maxsplit=1)[-1].split()
+        iflist = check_output([vnstatbin, "--dbiflist"]).split(":", maxsplit=1)[-1].split()
         if not iflist:
             raise NotFound("No interfaces found")
 
         if ifname not in iflist:
             ifname = iflist[0]  # default interface by name
 
-        data = json.loads(check_output(f"{vnstatbin} -i {ifname} --json --limit {max(limits)}"))
+        vnstatargs = [vnstatbin, "-i", ifname, "--json", "--limit", str(0 if 0 in limits else max(limits))]
+        data = json.loads(check_output(vnstatargs))
 
         jsonversion = data.get("jsonversion")
         if jsonversion != "2":
