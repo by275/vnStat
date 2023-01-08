@@ -61,12 +61,12 @@ class LogicMain(PluginModuleBase):
         try:
             if sub == "check_vnstat_bin":
                 path = p.get("path", "vnstat")
-                return {"success": True, "data": check_output([path, "-v"])}
+                return jsonify({"success": True, "data": check_output([path, "-v"])})
             if sub == "get_vnstat_data":
                 ifname = p.get("ifname", ModelSetting.get("default_interface_id"))
                 data = get_vnstat_data(ifname)
                 logger.debug("vnStatData by %s", data.__class__.__name__)
-                return {"success": True, "data": data.export()}
+                return jsonify({"success": True, "data": data.export()})
             if sub == "save_current_view":
                 traffic_view = p.get("traffic_view", "")
                 if traffic_view:
@@ -79,7 +79,7 @@ class LogicMain(PluginModuleBase):
         except subprocess.CalledProcessError as e:
             # vnStat 바이너리가 없을때
             logger.exception("Exception while calling vnStat process:")
-            return {"success": False, "log": e.output.strip().decode("utf-8")}
+            return jsonify({"success": False, "log": e.output.strip().decode("utf-8")})
         except Exception as e:
             logger.exception("Exception while processing ajax request:")
             return jsonify({"success": False, "log": str(e)})
